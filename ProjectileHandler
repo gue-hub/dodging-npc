@@ -1,0 +1,37 @@
+local Debris = game:GetService("Debris")
+
+local cannon = script.Parent
+local startPosition = cannon.StartPosition
+local npc = workspace:FindFirstChild("npc", true)
+local target = npc:FindFirstChild("HumanoidRootPart", true)
+local projectileFolder = workspace:FindFirstChild("Projectiles")
+
+-- settings
+local fireInterval = 3	-- промежуток времени между выстрелами
+
+-- создаем снаряд и выстреливаем с указаным интервалом
+while task.wait(fireInterval) do
+	
+	local position1 = cannon.StartPosition.Position	-- начальная точка
+	local position2 = target.Position				-- конечная точка
+	
+	local direction = position2 - position1	
+	local duration = math.log(1.001 + direction.Magnitude * 0.01)
+	position2 = position2 + target.AssemblyLinearVelocity * duration	-- стреляем на опережение
+	direction = position2 - position1
+	local force = direction / duration + Vector3.new(0, game.Workspace.Gravity * duration * 0.5, 0)
+	
+	-- создаем снаряд
+	local part = Instance.new("Part")
+	part.Size = Vector3.new(1, 1, 1)
+	part.Shape = Enum.PartType.Ball
+	part.Material = Enum.Material.Neon
+	part.Position = position1
+	part.CollisionGroup = "Projectile"
+	part.Parent = projectileFolder
+	part:SetNetworkOwner(nil)	-- расчитываем физику на сервере
+	
+	part:ApplyImpulse(force * part.AssemblyMass)	-- выстреливаем снарядом
+	
+	Debris:AddItem(part, 60)
+end
