@@ -13,23 +13,23 @@ local animationFolder = npc.Animations
 local projectileFolder = workspace.Projectiles
 
 	--| Variables
-local offset = 6			-- допустимое отклонение от точки
+local offset = 6		-- допустимое отклонение от точки
 local state = "spawn"		-- нынешний режим нпс
 local currentPoint = nil	-- текущая точка вп
 local nextPoint = nil		-- следующая точка вп
 local idleDuration = 2		-- продолжительность режима idle
 local idleTimer = nil		-- таймера для режима idle
 local dodgeObject = nil		-- объект от которого нпс должен увернуться
-local dodgeDistance = 20		-- расстояния до снаряда при котором нпс начет уворавичаться
-local ignoreProjectiles = {}					-- игнорируем снаряды от которых уже увернулись
+local dodgeDistance = 20	-- расстояния до снаряда при котором нпс начет уворавичаться
+local ignoreProjectiles = {}	-- игнорируем снаряды от которых уже увернулись
 
 -- animations
 local runAnimation = animator:LoadAnimation(animationFolder.Run)
 local idleAnimation = animator:LoadAnimation(animationFolder.Idle)
 
 local path = PathfindingService:CreatePath({	-- подготовка для расчёта путей
-	AgentRadius = 6,		-- Радиус агента
-	AgentHeight =  10,		-- Высота агента
+	AgentRadius = 6,	-- Радиус агента
+	AgentHeight =  10,	-- Высота агента
 	AgentCanJump = false,	-- Может ли агент прыгать
 	WaypointSpacing = 20,	-- растояние между точками пути
 })
