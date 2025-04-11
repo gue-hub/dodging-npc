@@ -1,0 +1,128 @@
+	--| Services
+local PathfindingService = game:GetService("PathfindingService")
+
+	--| NPC
+local npc = script.Parent
+local humanoid = npc:FindFirstChild("Humanoid")
+local animator = humanoid:FindFirstChild("Animator")
+local hrp = npc:FindFirstChild("HumanoidRootPart")
+
+	--| Folders
+local waypointFolder = workspace.waypoints
+local animationFolder = npc.Animations
+local projectileFolder = workspace.Projectiles
+
+	--| Variables
+local offset = 6			-- допустимое отклонение от точки
+local state = "spawn"		-- нынешний режим нпс
+local currentPoint = nil	-- текущая точка вп
+local nextPoint = nil		-- следующая точка вп
+local idleDuration = 2		-- продолжительность режима idle
+local idleTimer = nil		-- таймера для режима idle
+local dodgeObject = nil		-- объект от которого нпс должен увернуться
+local dodgeDistance = 20		-- расстояния до снаряда при котором нпс начет уворавичаться
+local ignoreProjectiles = {}					-- игнорируем снаряды от которых уже увернулись
+
+-- animations
+local runAnimation = animator:LoadAnimation(animationFolder.Run)
+local idleAnimation = animator:LoadAnimation(animationFolder.Idle)
+
+local path = PathfindingService:CreatePath({	-- подготовка для расчёта путей
+	AgentRadius = 6,		-- Радиус агента
+	AgentHeight =  10,		-- Высота агента
+	AgentCanJump = false,	-- Может ли агент прыгать
+	WaypointSpacing = 20,	-- растояние между точками пути
+})
+
+	--| Fuctions
+-- задаем направление движения
+local function MoveToPart(target)
+	
+	local success, errorMessage = pcall(function()
+		path:ComputeAsync(hrp.Position, target.Position)
+	end)
+	
+	if success then	-- выполнено без ошибки
+		local wp = path:GetWaypoints()
+		if #wp > 0 then
+			
+			if not runAnimation.IsPlaying then
+				runAnimation:Play()
+			end
+			
+			humanoid:MoveTo(wp[2].Position)	-- в 1 мы, в 2 следующая точка
+		end
+	else
+		warn("путь не рассчитан",npc, target, errorMessage)
+	end
+end
+
+	--| Main
+while task.wait() do
+	
+	for _, projectile in ipairs(projectileFolder:GetChildren()) do
+		if projectile:IsA("BasePart") then
+			if table.find(ignoreProjectiles, projectile) == nil then
+				if (hrp.Position - projectile.Position).Magnitude <= dodgeDistance then
+					dodgeObject = projectile
+					state = "dodge"
+				end
+			end
+		end
+	end
+	
+	if state == "patrol" then
+		-- режим патрулирования, идем к вп, когда дошли- выбираем следующий
+		
+		if nextPoint then
+			
+			MoveToPart(nextPoint)
+			
+			-- дошел до вп, state = idle
+			if (hrp.Position - nextPoint.Position).Magnitude <= offset then
+				currentPoint = nextPoint
+				nextPoint = nil
+				runAnimation:Stop()
+				
+				idleTimer = tick() + idleDuration
+				idleAnimation:Play()
+				state = "idle"
+			end	
+			
+		else
+			if currentPoint then
+				local nextPointName = tonumber(currentPoint.Name) + 1
+				-- когда достигли последнего вп, идем опять к первому
+				if nextPointName > #waypointFolder:GetChildren() then
+					nextPointName = 1
+				end
+				
+				nextPoint = waypointFolder:FindFirstChild(nextPointName)
+			else
+				state = "что-то пошло не так"
+			end
+		end
+		
+	elseif state == "idle"	 then
+		
+		-- по истечению таймера, переходим в режим патруля
+		if idleTimer < tick() then
+			idleAnimation:Stop()
+			state = "patrol"
+		end
+		
+	elseif state == "dodge" then
+		table.insert(ignoreProjectiles, dodgeObject)
+		
+		humanoid.Jump = true	
+		
+		state = "patrol"
+	else
+		
+		-- ни один из режимов не подошел, переходим в режим патруля и идем к вп номер 1
+		nextPoint = waypointFolder["1"]
+		state = "patrol"
+		
+	end
+	
+end
