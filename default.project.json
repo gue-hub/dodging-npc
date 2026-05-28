@@ -1,0 +1,6 @@
+{
+  "name": "DodgingNpc",
+  "tree": {
+    "$path": "src"
+  }
+}
